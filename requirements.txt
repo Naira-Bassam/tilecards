@@ -1,0 +1,7 @@
+flask
+gunicorn
+cairosvg
+google-genai
+pillow
+numpy
+boto3

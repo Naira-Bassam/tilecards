@@ -1,0 +1,9 @@
+library/
+gold_user.json
+__pycache__/
+*.pyc
+.env
+*.zip
+node_modules/
+.wrangler/
+.dev.vars

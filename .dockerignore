@@ -1,0 +1,11 @@
+library/
+__pycache__/
+*.pyc
+.env
+*.zip
+*.ipynb
+.git
+node_modules/
+.wrangler/
+worker/
+wrangler.jsonc
