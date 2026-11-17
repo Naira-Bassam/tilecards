@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tile Card Studio</title>
+<style>
+  /* خط Cairo محلي (من فولدر static) */
+  @font-face{font-family:Cairo;font-weight:400;src:url(static/fonts/cairo-arabic-400-normal.woff2) format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200E}
+  @font-face{font-family:Cairo;font-weight:400;src:url(static/fonts/cairo-latin-400-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122}
+  @font-face{font-family:Cairo;font-weight:700;src:url(static/fonts/cairo-arabic-700-normal.woff2) format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200E}
+  @font-face{font-family:Cairo;font-weight:700;src:url(static/fonts/cairo-latin-700-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122}
+  @font-face{font-family:Cairo;font-weight:800;src:url(static/fonts/cairo-arabic-800-normal.woff2) format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200E}
+  @font-face{font-family:Cairo;font-weight:800;src:url(static/fonts/cairo-latin-800-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122}
+
+  :root{
+    --bg:#f5f2ea; --panel:#fffdf8; --ink:#16303c; --muted:#5d727c; --line:#e4dccb;
+    --accent:#14566f; --accent-ink:#fff; --soft:#dff1f7; --danger:#b3321f; --ok:#1f7a4d;
+    --r:16px;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.6 Cairo,system-ui,"Segoe UI",Tahoma,sans-serif}
+  button,input,textarea{font:inherit;color:inherit}
+  button{cursor:pointer}
+  :focus-visible{outline:3px solid #58C3DF;outline-offset:2px}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 16px 56px}
+
+  header{display:flex;align-items:center;gap:14px;padding:22px 0 8px}
+  header .logo{width:52px;height:52px;border-radius:12px;background:#58C3DF;padding:6px;flex:none}
+  header h1{margin:0;font-weight:800;font-size:1.5rem;line-height:1.2}
+  header p{margin:0;color:var(--muted);font-size:.92rem}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+  .panel h2{margin:0 0 10px;font-size:1rem;font-weight:800}
+  .panel h2 small{font-weight:400;color:var(--muted);margin-inline-start:6px}
+
+  /* شريط التوليد */
+  .gen{margin-top:14px}
+  .gen form{display:flex;gap:10px;flex-wrap:wrap}
+  .gen input[type=text]{flex:1 1 240px;min-width:0;padding:12px 14px;border:2px solid var(--line);border-radius:12px;background:#fff;font-size:1.05rem}
+  .gen input[type=text]:focus{border-color:var(--accent);outline:none}
+  .btn{border:0;border-radius:12px;padding:11px 18px;font-weight:700;background:var(--accent);color:var(--accent-ink);transition:transform .08s,opacity .15s}
+  .btn:hover{opacity:.92} .btn:active{transform:translateY(1px)}
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+  .btn.ghost{background:transparent;color:var(--accent);border:2px solid var(--accent)}
+  .btn.sm{padding:6px 12px;font-size:.9rem;border-radius:10px}
+  details.opts{margin-top:10px;color:var(--muted);font-size:.92rem}
+  details.opts summary{cursor:pointer}
+  details.opts .row{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px;align-items:center}
+  details.opts select{padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:#fff}
+
+  .found{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+  .found .lead{font-size:.92rem;color:var(--muted);margin-bottom:8px}
+  .thumbs{display:flex;gap:10px;flex-wrap:wrap}
+  .thumb{width:104px;border:2px solid transparent;border-radius:14px;padding:0;background:none;position:relative;overflow:hidden}
+  .thumb:hover{border-color:var(--accent)}
+  .thumb svg{display:block;width:100%;height:auto}
+  .thumb .x{position:absolute;top:4px;inset-inline-start:4px;width:26px;height:26px;border-radius:50%;border:0;background:rgba(255,255,255,.92);color:var(--danger);font-weight:800;line-height:1;display:none}
+  .thumb:hover .x,.thumb:focus-within .x{display:block}
+
+  /* التقدم */
+  .job{margin-top:14px;display:flex;gap:14px;align-items:flex-start}
+  .spin{width:26px;height:26px;border-radius:50%;border:4px solid var(--soft);border-top-color:var(--accent);animation:sp 1s linear infinite;flex:none;margin-top:3px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .job .t{font-weight:700}
+  .job pre{margin:6px 0 0;font:400 .85rem/1.5 Cairo,monospace;color:var(--muted);white-space:pre-wrap;max-height:9.5em;overflow:auto}
+  .job.err{border-color:#e7b7ae;background:#fff5f2}
+  .job.err .t{color:var(--danger)}
+  .job.err .spin{display:none}
+
+  /* مساحة الشغل */
+  .work{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:18px;margin-top:18px;align-items:start}
+  @media (max-width:860px){.work{grid-template-columns:1fr}}
+  .stage{position:sticky;top:12px}
+  @media (max-width:860px){.stage{position:static}}
+  .cardbox{background:repeating-conic-gradient(#eee7d8 0 25%,#f7f2e6 0 50%) 0 0/20px 20px;border-radius:24px;padding:14px;display:flex;justify-content:center}
+  .cardbox svg{width:100%;max-width:360px;height:auto;filter:drop-shadow(0 8px 14px rgba(22,48,60,.22))}
+  .dl{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .dl .btn{flex:1 1 auto}
+  .controls{display:grid;gap:14px}
+
+  .strip{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 8px}
+  .cand{flex:none;width:92px;border:3px solid transparent;border-radius:12px;background:#fff;padding:3px;text-align:center}
+  .cand svg{display:block;width:100%;height:auto;border-radius:8px}
+  .cand span{display:block;font-size:.74rem;color:var(--muted);line-height:1.3;margin-top:2px}
+  .cand[aria-pressed=true]{border-color:var(--accent);background:var(--soft)}
+  .cand[aria-pressed=true] span{color:var(--accent);font-weight:700}
+
+  textarea{width:100%;min-height:84px;resize:vertical;padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:#fff}
+  textarea:focus{border-color:var(--accent);outline:none}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:99px;padding:2px 12px;font-size:.85rem;color:var(--muted)}
+  .chip:hover{border-color:var(--accent);color:var(--accent)}
+  .hint{font-size:.85rem;color:var(--muted);margin:6px 0 0}
+
+  .seg{display:inline-flex;border:2px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+  .seg button{border:0;background:none;padding:7px 16px;font-weight:700;color:var(--muted)}
+  .seg button[aria-pressed=true]{background:var(--accent);color:#fff}
+  .names{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+  @media (max-width:520px){.names{grid-template-columns:1fr}}
+  .names label{display:block;font-size:.85rem;color:var(--muted)}
+  .names input{width:100%;padding:9px 12px;border:2px solid var(--line);border-radius:10px;background:#fff;font-size:1.02rem}
+  .names input:focus{border-color:var(--accent);outline:none}
+  .names .off{opacity:.4}
+
+  .sw{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .sw button.c{width:36px;height:36px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);padding:0}
+  .sw button.c[aria-pressed=true]{box-shadow:0 0 0 3px var(--accent)}
+  .sw input[type=color]{width:42px;height:36px;border:0;padding:0;background:none;border-radius:8px}
+
+  /* المكتبة */
+  .lib{margin-top:22px}
+  .lib .head{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .lib .head h2{margin:0;flex:1 1 auto}
+  .lib input[type=search]{padding:8px 12px;border:2px solid var(--line);border-radius:10px;background:#fff;min-width:0;flex:0 1 240px}
+  .lib .thumbs{gap:12px}
+  .lib .thumb{width:calc(50% - 6px)}
+  @media (min-width:560px){.lib .thumb{width:150px}}
+  .empty{color:var(--muted);padding:12px 0}
+
+  /* نتايج التوليد (صور من غير كارت) */
+  .draft{margin-top:14px}
+  .draft .thumbs{gap:12px}
+  .dthumb{position:relative;width:calc(50% - 6px);padding:0;border:3px solid var(--line);border-radius:16px;background:#fff;overflow:hidden;text-align:start}
+  @media (min-width:560px){.dthumb{width:170px}}
+  .dthumb svg{display:block;width:100%;height:auto}
+  .dthumb[aria-pressed=true]{border-color:var(--accent);box-shadow:0 0 0 3px var(--soft)}
+  .dthumb .chk{position:absolute;top:8px;inset-inline-start:8px;width:24px;height:24px;border-radius:7px;border:2px solid #9aa9b0;background:#fff}
+  .dthumb[aria-pressed=true] .chk{background:var(--accent);border-color:var(--accent)}
+  .dthumb[aria-pressed=true] .chk::after{content:"";position:absolute;left:6px;top:1px;width:6px;height:12px;border:solid #fff;border-width:0 3px 3px 0;transform:rotate(45deg)}
+  .dthumb .badge{position:absolute;top:8px;inset-inline-end:8px;background:var(--accent);color:#fff;border-radius:99px;font-size:.72rem;padding:0 9px;line-height:1.7}
+  .dthumb .badge.added{top:auto;bottom:34px;background:var(--ok)}
+  .dthumb .cap{display:block;padding:4px 10px 6px;font-size:.8rem;color:var(--muted);border-top:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tog{display:flex;gap:10px;align-items:center;font-weight:700;cursor:pointer}
+  .tog input{width:20px;height:20px;accent-color:var(--accent)}
+  #cardCtl{display:grid;gap:14px}
+  #nameIn{min-height:50px;height:50px;max-height:150px;resize:none;flex:1 1 240px;width:auto;padding:12px 14px;border:2px solid var(--line);border-radius:12px;background:#fff;font-size:1.05rem;line-height:1.5}
+  #nameIn:focus{border-color:var(--accent);outline:none}
+  .gen .hint{margin:8px 0 0}
+  .queue{margin-top:14px}
+  .qrow{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+  .qrow:first-child{border-top:0}
+  .qrow .dot{width:10px;height:10px;border-radius:50%;background:#c9c2b2;flex:none}
+  .qrow.running .dot{background:var(--accent);animation:pl 1s ease-in-out infinite alternate}
+  .qrow.error .dot{background:var(--danger)}
+  @keyframes pl{to{opacity:.3}}
+  .qrow .st{color:var(--muted);font-size:.9rem;margin-inline-start:auto}
+  .qrow pre{flex-basis:100%;margin:0;font:400 .8rem/1.4 Cairo,monospace;color:var(--muted);white-space:pre-wrap}
+  .qrow .err{flex-basis:100%;color:var(--danger);font-size:.9rem}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+  .tab{border:2px solid var(--line);background:#fff;border-radius:99px;padding:3px 14px;font-weight:700;color:var(--muted)}
+  .tab[aria-pressed=true]{border-color:var(--accent);background:var(--accent);color:#fff}
+  .tog.sm{font-weight:400;font-size:.9rem;color:var(--muted);margin:10px 0 0}
+  .tog.sm input{width:16px;height:16px}
+  .toast{position:fixed;inset-inline:0;bottom:22px;margin:auto;width:max-content;max-width:90vw;background:var(--ink);color:#fff;padding:10px 18px;border-radius:99px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9}
+  .toast.on{opacity:1}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg class="logo" id="logo" viewBox="0 0 500 500" aria-hidden="true"></svg>
+    <div><h1>Tile Card Studio</h1><p>Type a character name and the model designs it from puzzle tiles. Pick the images you like, add them to your library, and turn any of them into a card if you want.</p></div>
+  </header>
+
+  <section class="panel gen">
+    <form id="genForm" autocomplete="off">
+      <textarea id="nameIn" rows="1" placeholder="Character names: Cat, Dog, Giraffe, عصفور…" maxlength="500" aria-label="Character names"></textarea>
+      <button class="btn" id="genBtn" type="submit">Generate images</button>
+    </form>
+    <p class="hint">One name or a whole list: separate with commas or new lines (up to 12). You can keep adding more while others are being made.</p>
+    <details class="opts">
+      <summary>Generation options</summary>
+      <div class="row">
+        <label>Images per character
+          <select id="nTries"><option>2</option><option>3</option><option selected>4</option><option>6</option></select>
+        </label>
+        <label>Design method
+          <select id="modes"><option value="mix">Mix (both methods)</option><option value="direct">Direct tiles only</option><option value="silhouette">Silhouette only</option></select>
+        </label>
+        <label><input type="checkbox" id="refine" checked> Auto-refine round if the result is weak</label>
+      </div>
+    </details>
+    <div class="found" id="found" hidden>
+      <div class="lead" id="foundLead"></div>
+      <div class="thumbs" id="foundThumbs"></div>
+    </div>
+  </section>
+
+  <section class="panel draft" id="draft" hidden>
+    <h2>New results <small id="draftHint"></small></h2>
+    <div class="tabs" id="dTabs" role="tablist"></div>
+    <label class="tog sm" style="margin:0 0 12px"><input type="checkbox" class="gridT"> Show 5×5 grid lines</label>
+    <div class="thumbs" id="draftGrid"></div>
+    <div class="dl">
+      <button class="btn" id="addSel">Add selected to library</button>
+      <button class="btn ghost" id="addSelCard" title="Adds them to the library already turned into cards (colored frame + name)">Add selected as cards</button>
+      <button class="btn ghost" id="addAll">Add all</button>
+      <button class="btn ghost" id="addSugg" title="Adds the Suggested image of every character in the tabs above">Add suggested from all</button>
+      <button class="btn ghost" id="selAll">Select all</button>
+      <button class="btn ghost" id="draftZip">Download all (zip)</button>
+      <button class="btn ghost" id="draftClose">Close</button>
+    </div>
+    <p class="hint">Tick as many as you want, then add them. Each one becomes its own item in the library. Images you don't add are discarded when you close that character's tab.</p>
+  </section>
+
+  <section class="panel queue" id="queue" hidden aria-live="polite">
+    <h2>Queue <small>finished results appear below, you don't have to wait</small></h2>
+    <div id="queueList"></div>
+  </section>
+
+  <section class="work" id="work" hidden>
+    <div class="stage">
+      <div class="cardbox" id="cardBox"></div>
+      <label class="tog sm"><input type="checkbox" class="gridT"> Show 5×5 grid lines</label>
+      <div class="dl">
+        <button class="btn ghost" id="cardBtn">Turn into a card</button>
+        <button class="btn" id="dlPng">Download PNG</button>
+        <button class="btn ghost" id="dlSvg">SVG</button>
+        <button class="btn ghost" id="dlAll">All attempts (zip)</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="panel">
+        <h2>Attempts <small id="candHint"></small></h2>
+        <div class="strip" id="strip" role="group" aria-label="Attempts"></div>
+        <button class="btn ghost sm" id="moreBtn">More attempts</button>
+        <p class="hint">Not clear enough? This generates new images for this character and compares them with the current one. You choose which to add to the library.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Edit the drawing <small>describe the change and the model applies it</small></h2>
+        <textarea id="comment" placeholder="e.g. make the ears longer, or add a tail on the left"></textarea>
+        <div class="chips" id="chips"></div>
+        <button class="btn" id="editBtn">Apply edit</button>
+        <button class="btn ghost" id="likeBtn" title="The model learns from this design in future generations">I like it, teach the model</button>
+        <p class="hint">Every edit is added as a new attempt and nothing is overwritten. Go back to any version from the attempts strip.</p>
+      </div>
+
+      <div class="panel">
+        <label class="tog"><input type="checkbox" id="cardOn"> Show as a card (color + name)</label>
+        <p class="hint">Off = just the tile image. Turn it on to add a colored frame and the name.</p>
+      </div>
+
+      <div id="cardCtl">
+      <div class="panel">
+        <h2>Name on the card</h2>
+        <div class="seg" id="langSeg" role="group" aria-label="Name language">
+          <button data-v="ar">Arabic</button><button data-v="en">English</button><button data-v="both">Both</button>
+        </div>
+        <div class="names">
+          <div id="arWrap"><label for="nameAr">Arabic name</label><input id="nameAr" maxlength="40" dir="rtl"></div>
+          <div id="enWrap"><label for="nameEn">English name</label><input id="nameEn" maxlength="40" dir="ltr"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Card color</h2>
+        <div class="sw" id="sw"></div>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel lib">
+    <div class="head">
+      <h2>Library <small id="libCount"></small></h2>
+      <input type="search" id="libQ" placeholder="Search the library" aria-label="Search the library">
+    </div>
+    <div class="thumbs" id="libGrid"></div>
+    <div class="empty" id="libEmpty" hidden>Nothing saved yet. Add images from your results and they will appear here.</div>
+  </section>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script src="static/jszip.min.js"></script>
+<script>
+'use strict';
+/* ---------------- أدوات صغيرة ---------------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('on'),2600); }
+async function api(path, opt){
+  const r = await fetch('api/'+path, opt && opt.body ? {method:opt.method||'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(opt.body)} : opt);
+  let d = {}; try { d = await r.json(); } catch(e){}
+  if(!r.ok) throw new Error(d.error || ('Error '+r.status));
+  return d;
+}
+
+/* ---------------- الرسم (نفس card_svg بتاع النوت بوك) ---------------- */
+let TILE = {}, ORI = {}, FONT_CSS = '';
+function cellTf(o){ let t=''; if(o[1]) t+=`rotate(${o[1]} 50 50) `; if(o[2]) t+='translate(100 0) scale(-1 1)'; return t.trim(); }
+function gridGroup(g, fill, stroke, sw){
+  let s='';
+  for(let r=0;r<5;r++) for(let c=0;c<5;c++){
+    const k=g[r][c]; let inner='';
+    if(k==='#') inner=`<rect width="100" height="100" fill="${fill}"/>`;
+    else if(k!=='.' && ORI[k]){
+      const o=ORI[k];
+      const st = stroke ? ` stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"` : '';
+      inner=`<g transform="${cellTf(o)}"><path d="${TILE[o[0]]}" fill="${fill}" fill-rule="evenodd"${st}/></g>`;
+    }
+    s+=`<g transform="translate(${c*100} ${r*100})">${inner}</g>`;
+  }
+  return s;
+}
+function linesSvg(x0,y0,cs,color,w){
+  let o='';
+  for(let i=0;i<6;i++){
+    o+=`<line x1="${x0+i*cs}" y1="${y0}" x2="${x0+i*cs}" y2="${y0+5*cs}" stroke="${color}" stroke-width="${w}"/>`;
+    o+=`<line x1="${x0}" y1="${y0+i*cs}" x2="${x0+5*cs}" y2="${y0+i*cs}" stroke="${color}" stroke-width="${w}"/>`;
+  }
+  return o;
+}
+const hex2rgb = h => [1,3,5].map(i => parseInt(h.slice(i,i+2),16));
+const rgb2hex = a => '#'+a.map(v=>Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('');
+const mix = (h,to,t) => rgb2hex(hex2rgb(h).map((v,i)=>v+(to[i]-v)*t));
+function lum(h){ const [r,g,b]=hex2rgb(h).map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)}); return .2126*r+.7152*g+.0722*b; }
+function palette(color){
+  const light = lum(color) > 0.22;     // خلفية فاتحة ← نص غامق، والعكس
+  return light
+    ? {text: mix(color,[0,0,0],.80), stroke: mix(color,[0,0,0],.62)}
+    : {text: '#ffffff', stroke: mix(color,[255,255,255],.55)};
+}
+function cardSvg(g, o){
+  const nameAr=o.nameAr||'', nameEn=o.nameEn||'', color=o.color||'#58C3DF', lang=o.lang||'both';
+  const W=400,H=540,GP=30,GS=340,M=10, cs=(GS-2*M)/5, k=cs/100, p=palette(color);
+  const showAr = lang!=='en' && nameAr.trim(), showEn = lang!=='ar' && nameEn.trim();
+  let txt='';
+  if(showAr && showEn){
+    txt=`<text x="${W/2}" y="486" text-anchor="middle" font-size="40" font-weight="800" fill="${p.text}" direction="rtl">${esc(nameAr)}</text>`
+       +`<text x="${W/2}" y="520" text-anchor="middle" font-size="24" font-weight="800" fill="${p.text}" letter-spacing="1">${esc(nameEn.toUpperCase())}</text>`;
+  } else if(showAr){
+    txt=`<text x="${W/2}" y="502" text-anchor="middle" font-size="52" font-weight="800" fill="${p.text}" direction="rtl">${esc(nameAr)}</text>`;
+  } else if(showEn){
+    txt=`<text x="${W/2}" y="500" text-anchor="middle" font-size="36" font-weight="800" fill="${p.text}" letter-spacing="2">${esc(nameEn.toUpperCase())}</text>`;
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="Cairo, Arial, sans-serif">`
+    + (o.embed && FONT_CSS ? `<style>${FONT_CSS}</style>` : '')
+    + `<rect width="${W}" height="${H}" rx="30" fill="${color}"/><rect x="${GP}" y="${GP}" width="${GS}" height="${GS}" rx="6" fill="#fff"/>`
+    + `<g transform="translate(${GP+M} ${GP+M}) scale(${k})">${gridGroup(g,'#111')}</g>${linesSvg(GP+M,GP+M,cs,'#9aa1a8',1.5)}`
+    + `<g transform="translate(${W/2-25} 386) scale(0.1)">${gridGroup(g,'#fff',p.stroke,9)}</g>${txt}</svg>`;
+}
+function gridOnlySvg(g){
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 520 520"><rect x="-10" y="-10" width="520" height="520" fill="#fff"/>${gridGroup(g,'#111')}${linesSvg(0,0,100,'#cfcfcf',3)}</svg>`;
+}
+
+let GRID = true; try{ GRID = localStorage.getItem('tc_grid') !== '0'; }catch(e){}
+function imageSvg(g, o){            // الصورة لوحدها (من غير كارت). مع خطوط الـ 5×5 تبقى على مربع أبيض، من غيرها خلفية شفافة
+  o=o||{};
+  const grid = o.grid===undefined ? GRID : o.grid, bg = grid ? '#fff' : o.bg;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 520 520" width="520" height="520">`
+    + (bg ? `<rect x="-10" y="-10" width="520" height="520" fill="${bg}"/>` : '') + gridGroup(g,'#111')
+    + (grid ? linesSvg(0,0,100,'#9aa1a8',2) : '') + `</svg>`;
+}
+
+/* ---------------- تحميل ---------------- */
+async function loadFont(){
+  const faces=[['arabic','U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200E'],
+               ['latin','U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122']];
+  let css='';
+  for(const [n,range] of faces){
+    try{
+      const buf = new Uint8Array(await (await fetch(`static/fonts/cairo-${n}-800-normal.woff2`)).arrayBuffer());
+      let bin=''; for(let i=0;i<buf.length;i+=0x8000) bin+=String.fromCharCode.apply(null,buf.subarray(i,i+0x8000));
+      css+=`@font-face{font-family:Cairo;font-weight:800;src:url(data:font/woff2;base64,${btoa(bin)}) format('woff2');unicode-range:${range}}`;
+    }catch(e){}
+  }
+  FONT_CSS=css;
+}
+function saveBlob(blob, name){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+async function svgToPng(svg, scale=3, W=400, H=540){
+  const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
+  const img=new Image(); img.src=url; await img.decode();
+  const cv=document.createElement('canvas'); cv.width=W*scale; cv.height=H*scale;
+  const ctx=cv.getContext('2d'); ctx.drawImage(img,0,0,cv.width,cv.height);
+  await sleep(150);                                   // أحياناً الخط المدمج بيتأخر أول رسمة
+  ctx.clearRect(0,0,cv.width,cv.height); ctx.drawImage(img,0,0,cv.width,cv.height);
+  URL.revokeObjectURL(url);
+  return new Promise(r=>cv.toBlob(r,'image/png'));
+}
+const slug = s => (s||'card').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'') || 'card';
+
+/* ---------------- الحالة ---------------- */
+let entry = null, saveT = null;
+const COLORS = ['#58C3DF','#FFCA3A','#F4A261','#E76F51','#FF8FA3','#B79CED','#8AC926','#6A994E','#2B2D42','#EDE7DA'];
+const CHIPS = ['Make the ears longer','Add a tail','Make the eye bigger','Simplify the shape','Make the head bigger'];
+
+function cardOpts(){ return {nameAr:entry.name_ar, nameEn:entry.name_en, color:entry.color, lang:entry.lang}; }
+function curGrid(){ return entry.candidates[entry.selected].grid; }
+
+function renderCard(){ $('cardBox').innerHTML = entry.card ? cardSvg(curGrid(), cardOpts()) : imageSvg(curGrid()); }
+function renderStrip(){
+  const el=$('strip'); el.innerHTML='';
+  entry.candidates.forEach((c,i)=>{
+    const b=document.createElement('button'); b.className='cand'; b.setAttribute('aria-pressed', i===entry.selected);
+    const label = c.kind==='edit' ? 'Edit' : c.kind==='refined' ? 'Refined' : 'Try';
+    b.title = (c.comment ? 'Comment: '+c.comment+'\n' : '') + `Model: ${c.model}` + (c.kind!=='edit' ? ` · score ${c.score}` : '');
+    b.innerHTML = gridOnlySvg(c.grid) + `<span>${label} ${i+1}</span>`;
+    b.onclick=()=>{ entry.selected=i; renderStrip(); renderCard(); persist({selected:i}); };
+    el.appendChild(b);
+  });
+  $('candHint').textContent = entry.candidates.length+' versions';
+}
+function renderControls(){
+  $('cardOn').checked=!!entry.card; $('cardCtl').hidden=!entry.card; $('cardBtn').textContent = entry.card ? 'Show image only' : 'Turn into a card';
+  for(const b of $('langSeg').children) b.setAttribute('aria-pressed', b.dataset.v===entry.lang);
+  $('nameAr').value=entry.name_ar; $('nameEn').value=entry.name_en;
+  $('arWrap').classList.toggle('off', entry.lang==='en'); $('enWrap').classList.toggle('off', entry.lang==='ar');
+  for(const b of $('sw').querySelectorAll('button.c')) b.setAttribute('aria-pressed', b.dataset.c.toLowerCase()===entry.color.toLowerCase());
+  $('cp').value=entry.color;
+}
+function renderAll(){ renderCard(); renderStrip(); renderControls(); }
+function persist(patch){                                // حفظ بعد نص ثانية من آخر تغيير
+  Object.assign(persist.pending ||= {}, patch);
+  clearTimeout(saveT);
+  saveT=setTimeout(async()=>{
+    const p=persist.pending; persist.pending=null;
+    try{ await api('entry/'+entry.id,{method:'PATCH',body:p}); refreshLibrary(); }catch(e){ toast('Not saved: '+e.message); }
+  },450);
+}
+async function openEntry(id, scroll=true){
+  try{ entry = await api('entry/'+id); }catch(e){ toast('Card not found'); return; }
+  $('work').hidden=false; history.replaceState(null,'','#e='+id);
+  renderAll(); setBusyButtons(); if(scroll) $('work').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ---------------- الطابور (توليد / تعديل / محاولات إضافية) ---------------- */
+let tasks = [];            // {key,title,kind:'gen'|'edit'|'more',job,ref,status,queue,elapsed,log,error}
+const store = {
+  get(){ try{ return JSON.parse(localStorage.getItem('tc_tasks')||'[]'); }catch(e){ return []; } },
+  set(v){ try{ localStorage.setItem('tc_tasks', JSON.stringify(v)); }catch(e){} }
+};
+const pending = t => t.status==='queued' || t.status==='running';
+function saveTasks(){ store.set(tasks.filter(t=>t.job && pending(t)).map(t=>({title:t.title,kind:t.kind,job:t.job,ref:t.ref}))); }
+function setBusyButtons(){
+  const p = entry && tasks.some(t=>(t.kind==='edit'||t.kind==='more') && t.ref===entry.id && pending(t));
+  $('editBtn').disabled = !!p; $('moreBtn').disabled = !!p;
+}
+function addTask(o){
+  const t={key:Math.random().toString(36).slice(2), status:'queued', queue:0, elapsed:0, log:[], error:null, ...o};
+  tasks.push(t); saveTasks(); renderQueue(); poll(); return t;
+}
+function renderQueue(){
+  $('queue').hidden = !tasks.length;
+  const ul=$('queueList'); ul.innerHTML='';
+  tasks.forEach(t=>{
+    const li=document.createElement('div'); li.className='qrow '+t.status;
+    const st = t.status==='queued' ? `In queue${t.queue?` (position ${t.queue})`:''}` : t.status==='running' ? `Working · ${t.elapsed}s${t.n?` · ${t.n} image${t.n>1?'s':''} ready`:''}` : t.status==='error' ? 'Failed' : 'Done';
+    li.innerHTML = `<span class="dot"></span><b>${esc(t.title)}</b><span class="st">${esc(st)}</span>`
+      + (t.status==='running' && t.log.length ? `<pre>${esc(t.log.slice(-3).join('\n'))}</pre>` : '')
+      + (t.status==='error' ? `<div class="err">${esc(t.error||'')}</div>` : '');
+    if(t.status==='error'){
+      const x=document.createElement('button'); x.className='btn ghost sm'; x.textContent='Dismiss';
+      x.onclick=()=>{ tasks=tasks.filter(k=>k!==t); renderQueue(); }; li.appendChild(x);
+    }
+    ul.appendChild(li);
+  });
+  setBusyButtons();
+}
+let polling=false;
+async function poll(){
+  if(polling) return; polling=true;
+  try{
+    while(tasks.some(pending)){
+      for(const t of tasks.filter(pending)){
+        try{
+          const j=await api('job/'+t.job);
+          t.status=j.status; t.queue=j.queue; t.elapsed=j.elapsed; t.log=j.log; t.error=j.error;
+          if(j.kind==='draft' && j.ref && j.status!=='done' && j.n!==t.n){ t.n=j.n; await syncDraft(j.ref); }   // اعرضي اللي خلص من غير ما تستني الباقي
+          if(j.status==='done') await onTaskDone(t,j);
+        }catch(e){ t.status='error'; t.error='Lost track of this job (the server may have restarted).'; }
+      }
+      saveTasks(); renderQueue();
+      if(tasks.some(pending)) await sleep(1500);
+    }
+  } finally { polling=false; }
+}
+async function onTaskDone(t,j){
+  if(j.kind==='draft'){ await syncDraft(j.ref, true); toast('Results ready: '+t.title.replace(/^(Designing|More attempts: )\s*/,'')); }
+  else { if(entry && entry.id===j.ref) await openEntry(j.ref,false); else toast('Edit finished'); refreshLibrary(); }
+  tasks=tasks.filter(k=>k!==t);
+}
+
+/* ---------------- المكتبة ---------------- */
+function thumb(s, onOpen, withDelete){
+  const d=document.createElement('div'); d.className='thumb';
+  const open=document.createElement('button'); open.className='thumb'; open.style.cssText='width:100%;border:0;padding:0;background:none';
+  open.setAttribute('aria-label', s.name_ar||s.name_en);
+  open.innerHTML = s.card ? cardSvg(s.grid, {nameAr:s.name_ar,nameEn:s.name_en,color:s.color,lang:s.lang}) : imageSvg(s.grid, {bg:'#fff'});
+  if(!s.card) open.style.borderRadius='14px', open.style.overflow='hidden';
+  open.onclick=onOpen; d.appendChild(open);
+  if(withDelete){
+    const x=document.createElement('button'); x.className='x'; x.textContent='×'; x.title='Delete from library'; x.setAttribute('aria-label','Delete');
+    x.onclick=async ev=>{ ev.stopPropagation(); if(!confirm('Delete this item from the library permanently?')) return;
+      await api('entry/'+s.id,{method:'DELETE'}); if(entry&&entry.id===s.id){entry=null;$('work').hidden=true;history.replaceState(null,'','#');} refreshLibrary(); };
+    d.appendChild(x);
+  }
+  return d;
+}
+let libT=null;
+async function refreshLibrary(){
+  const q=$('libQ').value.trim();
+  let list=[]; try{ list=await api('library?q='+encodeURIComponent(q)); }catch(e){}
+  const g=$('libGrid'); g.innerHTML='';
+  list.forEach(s=>g.appendChild(thumb(s,()=>openEntry(s.id),true)));
+  $('libEmpty').hidden = list.length>0; $('libEmpty').textContent = q ? 'No results for this search.' : 'Nothing saved yet. Add images from your results and they will appear here.';
+  $('libCount').textContent = list.length ? `(${list.length})` : '';
+}
+let foundT=null;
+function onNameInput(){
+  clearTimeout(foundT);
+  foundT=setTimeout(async()=>{
+    const nm=parseNames($('nameIn').value); const q=nm.length===1 ? nm[0] : '';
+    if(q.length<2){ $('found').hidden=true; return; }
+    let list=[]; try{ list=await api('library?q='+encodeURIComponent(q)); }catch(e){}
+    $('found').hidden=!list.length; if(!list.length) return;
+    $('foundLead').textContent = `Found ${list.length} in the library. Click one to open it instead of generating again, or just generate a new one.`;
+    const t=$('foundThumbs'); t.innerHTML=''; list.slice(0,8).forEach(s=>t.appendChild(thumb(s,()=>openEntry(s.id),false)));
+  },350);
+}
+
+/* ---------------- ربط الأزرار ---------------- */
+const parseNames = v => { const seen=new Set(), out=[]; for(const s of v.split(/[,،;\n]+/).map(x=>x.trim()).filter(Boolean)){ const k=s.toLowerCase(); if(!seen.has(k)){ seen.add(k); out.push(s); } } return out.slice(0,12); };
+$('genForm').onsubmit = async e => {
+  e.preventDefault();
+  const names=parseNames($('nameIn').value); if(!names.length){ toast('Type at least one character name'); return; }
+  try{
+    const r=await api('generate',{body:{names, n:+$('nTries').value, refine:$('refine').checked, modes:$('modes').value}});
+    r.jobs.forEach(j=>{ if(j.job) addTask({title:'Designing '+j.name, kind:'gen', job:j.job}); else toast(j.name+': '+j.error); });
+    $('nameIn').value=''; $('nameIn').style.height=''; $('found').hidden=true;
+  }catch(err){ toast(err.message); }
+};
+$('nameIn').addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); $('genForm').requestSubmit(); } });
+$('nameIn').addEventListener('input', e=>{ e.target.style.height='auto'; e.target.style.height=Math.min(e.target.scrollHeight,150)+'px'; });
+$('nameIn').oninput = onNameInput;
+$('libQ').oninput = ()=>{ clearTimeout(libT); libT=setTimeout(refreshLibrary,250); };
+
+$('editBtn').onclick = async()=>{
+  if(!entry) return;
+  const comment=$('comment').value.trim(); if(!comment){ toast('Write a comment first'); return; }
+  try{ const {job}=await api('entry/'+entry.id+'/edit',{body:{comment}}); addTask({title:'Editing '+(entry.name_en||'image'), kind:'edit', job, ref:entry.id}); $('comment').value=''; }catch(e){ toast(e.message); }
+};
+$('moreBtn').onclick = async()=>{
+  if(!entry) return;
+  try{ const {job}=await api('entry/'+entry.id+'/more',{body:{n:3, modes:$('modes').value}}); addTask({title:'More attempts: '+(entry.name_en||'image'), kind:'more', job, ref:entry.id}); }catch(e){ toast(e.message); }
+};
+$('likeBtn').onclick = async()=>{ try{ await api('entry/'+entry.id+'/like',{body:{}}); toast('Done. The model will learn from this design'); }catch(e){ toast(e.message); } };
+
+for(const b of $('langSeg').children) b.onclick=()=>{ entry.lang=b.dataset.v; renderControls(); renderCard(); persist({lang:entry.lang}); };
+$('nameAr').oninput=e=>{ entry.name_ar=e.target.value; renderCard(); persist({name_ar:entry.name_ar}); };
+$('nameEn').oninput=e=>{ entry.name_en=e.target.value; renderCard(); persist({name_en:entry.name_en}); };
+function setColor(c){ entry.color=c; renderControls(); renderCard(); persist({color:c}); }
+COLORS.forEach(c=>{ const b=document.createElement('button'); b.className='c'; b.dataset.c=c; b.style.background=c; b.title=c; b.setAttribute('aria-label','Color '+c); b.onclick=()=>setColor(c); $('sw').appendChild(b); });
+{ const cp=document.createElement('input'); cp.type='color'; cp.id='cp'; cp.title='Custom color'; cp.setAttribute('aria-label','Custom color'); cp.oninput=e=>setColor(e.target.value); $('sw').appendChild(cp); }
+CHIPS.forEach(t=>{ const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=t; b.onclick=()=>{ $('comment').value=t; $('comment').focus(); }; $('chips').appendChild(b); });
+
+const setCard = v=>{ entry.card=v; renderControls(); renderCard(); persist({card:v}); };
+$('cardOn').onchange=e=>setCard(e.target.checked);
+$('cardBtn').onclick=()=>setCard(!entry.card);
+document.querySelectorAll('.gridT').forEach(c=>{
+  c.checked=GRID;
+  c.onchange=()=>{ GRID=c.checked; try{ localStorage.setItem('tc_grid', GRID?'1':'0'); }catch(e){}
+    document.querySelectorAll('.gridT').forEach(x=>x.checked=GRID); renderDrafts(); if(entry) renderCard(); refreshLibrary(); };
+});
+function fileBase(i){ return `${slug(entry.name_en)}${i==null?'':'_try'+(i+1)}`; }
+function svgFor(g){ return entry.card ? cardSvg(g, {...cardOpts(), embed:true}) : imageSvg(g); }
+const pngOf = svg => entry.card ? svgToPng(svg) : svgToPng(svg,3,520,520);
+$('dlPng').onclick=async()=>{ try{ saveBlob(await pngOf(svgFor(curGrid())), fileBase()+'.png'); }catch(e){ toast('Download failed: '+e.message); } };
+$('dlSvg').onclick=()=>saveBlob(new Blob([svgFor(curGrid())],{type:'image/svg+xml'}), fileBase()+'.svg');
+$('dlAll').onclick=async()=>{
+  const btn=$('dlAll'); btn.disabled=true; const old=btn.textContent; btn.textContent='Preparing…';
+  try{
+    const zip=new JSZip();
+    for(let i=0;i<entry.candidates.length;i++){
+      const c=entry.candidates[i], svg=svgFor(c.grid), n=fileBase(i)+'_'+c.kind;
+      zip.file(n+'.svg', svg); zip.file(n+'.png', await pngOf(svg));
+      zip.file(n+'.json', JSON.stringify({name_en:entry.name_en,name_ar:entry.name_ar,grid:c.grid,score:c.score,model:c.model,kind:c.kind,comment:c.comment},null,1));
+    }
+    saveBlob(await zip.generateAsync({type:'blob'}), slug(entry.name_en)+'_all.zip');
+  }catch(e){ toast('Download failed: '+e.message); }
+  btn.disabled=false; btn.textContent=old;
+};
+
+/* ---------------- نتايج التوليد (كل شخصية في تبويب) ---------------- */
+let drafts=[], activeId=null;
+const curDraft = () => drafts.find(d=>d.id===activeId) || null;
+const dName = d => d.name_en || d.query || 'image';
+function initDraft(d){ const added=new Set(d.added||[]); d._sel=new Set(d.suggested!=null && !added.has(d.suggested) ? [d.suggested] : []); return d; }   // المقترح متعلّم من الأول
+async function syncDraft(id, final){
+  let d; try{ d = await api('draft/'+id); }catch(e){ return; }
+  const cur = drafts.find(x=>x.id===id);
+  if(!cur){ drafts.push(initDraft(d)); if(!curDraft()) activeId=id; }          // مانغيّرش التبويب اللي بتشتغلي عليه
+  else{
+    const keep=cur._sel; Object.assign(cur,d); cur._sel=keep;
+    if(final && keep.size===0 && d.suggested!=null && !(d.added||[]).includes(d.suggested)) keep.add(d.suggested);   // المقترح يتعلّم أول ما التوليد يخلص
+  }
+  renderDrafts();
+}
+function renderDrafts(){
+  const d=curDraft(); $('draft').hidden=!d; if(!d) return;
+  const tabs=$('dTabs'); tabs.innerHTML='';
+  drafts.forEach(x=>{
+    const b=document.createElement('button'); b.className='tab'; b.type='button'; b.setAttribute('role','tab'); b.setAttribute('aria-pressed', x.id===activeId);
+    b.textContent = `${dName(x)} (${(x.added||[]).length}/${x.candidates.length})${x.status==='running'?' …':''}`; b.onclick=()=>{ activeId=x.id; renderDrafts(); }; tabs.appendChild(b);
+  });
+  const g=$('draftGrid'); g.innerHTML='';
+  const added=new Set(d.added||[]);
+  d.candidates.forEach((c,i)=>{
+    const el=document.createElement('button'); el.className='dthumb'; el.type='button'; el.setAttribute('aria-pressed', d._sel.has(i));
+    el.title=`Model: ${c.model} · method: ${c.mode} · score ${c.score}`;
+    el.innerHTML=imageSvg(c.grid,{bg:'#fff'})+'<span class="chk" aria-hidden="true"></span>'
+      +(i===d.suggested?'<span class="badge">Suggested</span>':'')+(added.has(i)?'<span class="badge added">Added ✓</span>':'')
+      +`<span class="cap">${esc(c.name_en||d.name_en||'')}${c.name_ar?' · '+esc(c.name_ar):''}</span>`;
+    el.onclick=()=>{ d._sel.has(i)?d._sel.delete(i):d._sel.add(i); renderDrafts(); };
+    g.appendChild(el);
+  });
+  $('addSel').textContent=`Add selected (${d._sel.size}) to library`; $('addSel').disabled=!d._sel.size;
+  $('addSelCard').textContent=`Add selected (${d._sel.size}) as cards`; $('addSelCard').disabled=!d._sel.size;
+  $('addSugg').hidden = drafts.length<2;
+  $('draftHint').textContent=d.candidates.length+' images'+(d.status==='running'?' · still generating, new ones appear as they finish':'')+(d.from_entry?' · compared with the current one':'');
+}
+async function addFromDraft(d, idxs, quiet, card){
+  if(!idxs.length){ if(!quiet) toast('Select at least one image'); return 0; }
+  const r=await api('draft/'+d.id+'/add',{body:{indexes:idxs, card:!!card}});
+  d.added=[...new Set([...(d.added||[]),...idxs])]; d._sel=new Set([...d._sel].filter(i=>!idxs.includes(i)));
+  return r.entries.length;
+}
+async function guarded(fn){ try{ const n=await fn(); renderDrafts(); refreshLibrary(); if(n) toast(`Added ${n} to the library`); }catch(e){ toast(e.message); } }
+$('addSel').onclick=()=>{ const d=curDraft(); if(d) guarded(()=>addFromDraft(d,[...d._sel])); };
+$('addSelCard').onclick=()=>{ const d=curDraft(); if(d) guarded(()=>addFromDraft(d,[...d._sel],false,true)); };
+$('addAll').onclick=()=>{ const d=curDraft(); if(d) guarded(()=>addFromDraft(d,d.candidates.map((_,i)=>i).filter(i=>!(d.added||[]).includes(i)))); };
+$('addSugg').onclick=()=>guarded(async()=>{ let n=0; for(const d of drafts){ if(d.suggested!=null && !(d.added||[]).includes(d.suggested)) n+=await addFromDraft(d,[d.suggested],true); } return n; });
+$('selAll').onclick=()=>{ const d=curDraft(); if(!d) return; const all=d.candidates.map((_,i)=>i); d._sel = d._sel.size===all.length ? new Set() : new Set(all); renderDrafts(); };
+$('draftClose').onclick=async()=>{
+  const d=curDraft(); if(!d) return;
+  const left=d.candidates.length-(d.added||[]).length;
+  if(left>0 && !confirm(`${left} image(s) of "${dName(d)}" were not added and will be discarded. Close anyway?`)) return;
+  try{ await api('draft/'+d.id,{method:'DELETE'}); }catch(e){}
+  drafts=drafts.filter(x=>x!==d); activeId = drafts.length ? drafts[0].id : null; renderDrafts();
+};
+$('draftZip').onclick=async()=>{
+  const d=curDraft(); if(!d) return;
+  const btn=$('draftZip'); btn.disabled=true; const old=btn.textContent; btn.textContent='Preparing…';
+  try{
+    const zip=new JSZip();
+    for(let i=0;i<d.candidates.length;i++){
+      const c=d.candidates[i], svg=imageSvg(c.grid), n=`${slug(c.name_en||d.name_en)}_try${i+1}_${c.kind}`;
+      zip.file(n+'.svg', svg); zip.file(n+'.png', await svgToPng(svg,3,520,520));
+      zip.file(n+'.json', JSON.stringify({name_en:c.name_en,name_ar:c.name_ar,grid:c.grid,score:c.score,model:c.model,mode:c.mode,kind:c.kind},null,1));
+    }
+    saveBlob(await zip.generateAsync({type:'blob'}), slug(d.name_en)+'_results.zip');
+  }catch(e){ toast('Download failed: '+e.message); }
+  btn.disabled=false; btn.textContent=old;
+};
+
+/* ---------------- تشغيل ---------------- */
+(async function init(){
+  try{
+    const cat=await api('catalog'); TILE=cat.tiles; ORI=cat.orients;
+  }catch(e){ toast('Could not load the tile catalog'); return; }
+  await loadFont();
+  $('logo').innerHTML = gridGroup([['.','3d','0a','3a','.'],['3d','0a','0a','0a','3a'],['.','.','42a','23b','23h'],['.','.','42a','8d','8c'],['.','6c','0a','6d','.']],'#fff');
+  await refreshLibrary();
+  const m=location.hash.match(/e=([a-z0-9]+)/); if(m) openEntry(m[1], false);
+  try{ for(const d of await api('drafts')) drafts.push(initDraft(d)); if(drafts.length) activeId=drafts[0].id; renderDrafts(); }catch(e){}
+  for(const t of store.get()) if(t.job) addTask({title:t.title, kind:t.kind, job:t.job, ref:t.ref});
+})();
+</script>
+</body>
+</html>
